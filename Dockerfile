@@ -10,9 +10,8 @@
     WORKDIR /app
     COPY --from=backend-build /app/published .
     
-    # Expose the API port
-    EXPOSE 5000
+    # Expose the API port that Railway will use
+    EXPOSE 8080
     
     # Run the Backend API
     ENTRYPOINT ["dotnet", "AppartementReservationAPI.dll"]
-    
