@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\souhail\\Documents\\GitHub\\AirBnb\\AppartementReservationAPI\\AppartementReservationAPI.csproj": {}
+    "C:\\Users\\souhail\\Documents\\GitHub\\backend\\AppartementReservationAPI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\souhail\\Documents\\GitHub\\AirBnb\\AppartementReservationAPI\\AppartementReservationAPI.csproj": {
+    "C:\\Users\\souhail\\Documents\\GitHub\\backend\\AppartementReservationAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\souhail\\Documents\\GitHub\\AirBnb\\AppartementReservationAPI\\AppartementReservationAPI.csproj",
+        "projectUniqueName": "C:\\Users\\souhail\\Documents\\GitHub\\backend\\AppartementReservationAPI.csproj",
         "projectName": "AppartementReservationAPI",
-        "projectPath": "C:\\Users\\souhail\\Documents\\GitHub\\AirBnb\\AppartementReservationAPI\\AppartementReservationAPI.csproj",
+        "projectPath": "C:\\Users\\souhail\\Documents\\GitHub\\backend\\AppartementReservationAPI.csproj",
         "packagesPath": "C:\\Users\\souhail\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\souhail\\Documents\\GitHub\\AirBnb\\AppartementReservationAPI\\obj\\",
+        "outputPath": "C:\\Users\\souhail\\Documents\\GitHub\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
