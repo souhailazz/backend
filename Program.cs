@@ -1,11 +1,7 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using AppartementReservationAPI.Data;
-
-// For Railway deployment, use environment variable PORT or default to 8080
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-// Configure ASPNETCORE_URLS environment variable
-Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://+:{port}");
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +9,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Get port for Railway
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(int.Parse(port));
+});
 
 // Enable CORS
 builder.Services.AddCors(options =>
@@ -26,14 +29,21 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Get connection string from environment variable or appsettings.json
+// Configure DbContext with SQL Server
+// Get connection string from environment variable or fall back to hardcoded one only for development
 string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
-    builder.Configuration.GetConnectionString("DefaultConnection");
+    "workstation id=AppartementReservationDB.mssql.somee.com;packet size=4096;user id=souhailazzimani_SQLLogin_1;pwd=x7heeqrtjf;data source=AppartementReservationDB.mssql.somee.com;persist security info=False;initial catalog=AppartementReservationDB;TrustServerCertificate=True";
 
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(connectionString));
-
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+        sqlOptions.CommandTimeout(5); // Increase command timeout to 30 seconds
+    }));
 // Configure Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -43,26 +53,23 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
+
 var app = builder.Build();
 
-// Always use Swagger in all environments for Railway
-app.UseSwagger();
-app.UseSwaggerUI();
 
-// Use CORS
-app.UseCors("AllowAll");
+    app.UseSwagger();
+    app.UseSwaggerUI();
 
-// Skip HTTPS redirection on Railway (as Railway handles HTTPS)
+
+// Only use HTTPS redirection in development (not on Railway)
 if (!app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }
 
+app.UseCors("AllowAll");
 app.UseAuthorization();
 app.UseSession();
 app.MapControllers();
-
-// Add a simple health check endpoint that Railway can use to verify the app is running
-app.MapGet("/", () => "API is running!");
 
 app.Run();
