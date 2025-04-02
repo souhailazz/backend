@@ -42,10 +42,6 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Configure Data Protection
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo("/app/.keys"))
-    .SetApplicationName("AppartementReservationAPI");
 
 var app = builder.Build();
 
