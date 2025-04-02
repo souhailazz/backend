@@ -29,8 +29,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Configure DbContext with SQL Server
-// Get connection string from environment variable or fall back to hardcoded one only for development
+
 string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
     "Server=AppartementReservationDB.mssql.somee.com;" +
     "Database=AppartementReservationDB;" +
@@ -47,7 +46,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             maxRetryCount: 5,
             maxRetryDelay: TimeSpan.FromSeconds(30),
             errorNumbersToAdd: null);
-        sqlOptions.CommandTimeout(5); // Increase command timeout to 30 seconds
+        sqlOptions.CommandTimeout(5); 
     }));
 // Configure Session
 builder.Services.AddDistributedMemoryCache();

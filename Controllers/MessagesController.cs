@@ -81,41 +81,18 @@ public async Task<IActionResult> GetUserChats(int sessionId)
 {
     try
     {
-        // Get all reservations where the user is either sender or receiver
-        var reservationIds = await _context.Message
+        var chats = await _context.Message
             .Where(m => m.SenderId == sessionId || m.ReceiverId == sessionId)
-            .Select(m => m.ReservationId)
-            .Distinct()
-            .ToListAsync();
-
-        var chats = new List<object>();
-        foreach (var reservationId in reservationIds)
-        {
-            // Get first message of conversation to determine participants
-            var firstMessage = await _context.Message
-                .Where(m => m.ReservationId == reservationId)
-                .OrderBy(m => m.SentAt)
-                .FirstOrDefaultAsync();
-
-            if (firstMessage != null)
+            .GroupBy(m => m.ReservationId)
+            .Select(g => new
             {
-                chats.Add(new
-                {
-                    ReservationId = reservationId,
-                    ClientId = firstMessage.SenderId,
-                    AdminId = firstMessage.ReceiverId,
-                    // Include last message timestamp for sorting (optional)
-                    LastMessageTime = await _context.Message
-                        .Where(m => m.ReservationId == reservationId)
-                        .OrderByDescending(m => m.SentAt)
-                        .Select(m => m.SentAt)
-                        .FirstOrDefaultAsync()
-                });
-            }
-        }
-
-        // Sort by most recent activity
-        chats = chats.OrderByDescending(c => ((dynamic)c).LastMessageTime).ToList();
+                ReservationId = g.Key,
+                ClientId = g.OrderBy(m => m.SentAt).Select(m => m.SenderId).FirstOrDefault(),
+                AdminId = g.OrderBy(m => m.SentAt).Select(m => m.ReceiverId).FirstOrDefault(),
+                LastMessageTime = g.Max(m => m.SentAt)
+            })
+            .OrderByDescending(c => c.LastMessageTime)
+            .ToListAsync();
 
         return Ok(chats);
     }
@@ -125,5 +102,6 @@ public async Task<IActionResult> GetUserChats(int sessionId)
         return StatusCode(500, "An error occurred while retrieving chats.");
     }
 }
+
 
 }
