@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using AppartementReservationAPI.Data;
-using System.IO;
+
+// For Railway deployment, use environment variable PORT or default to 8080
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+// Configure ASPNETCORE_URLS environment variable
+Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://+:{port}");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,13 +13,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
-// Get port for Railway
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(int.Parse(port));
-});
 
 // Enable CORS
 builder.Services.AddCors(options =>
@@ -29,9 +26,13 @@ builder.Services.AddCors(options =>
         });
 });
 
+// Get connection string from environment variable or appsettings.json
+string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
+    builder.Configuration.GetConnectionString("DefaultConnection");
+
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer("workstation id=AppartementReservationDB.mssql.somee.com;packet size=4096;user id=souhailazzimani_SQLLogin_1;pwd=x7heeqrtjf;data source=AppartementReservationDB.mssql.somee.com;persist security info=False;initial catalog=AppartementReservationDB;TrustServerCertificate=True"));
+    options.UseSqlServer(connectionString));
 
 // Configure Session
 builder.Services.AddDistributedMemoryCache();
@@ -42,25 +43,26 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// Always use Swagger in all environments for Railway
+app.UseSwagger();
+app.UseSwaggerUI();
 
-// Only use HTTPS redirection in development (not on Railway)
+// Use CORS
+app.UseCors("AllowAll");
+
+// Skip HTTPS redirection on Railway (as Railway handles HTTPS)
 if (!app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
 }
 
-app.UseCors("AllowAll");
 app.UseAuthorization();
 app.UseSession();
 app.MapControllers();
+
+// Add a simple health check endpoint that Railway can use to verify the app is running
+app.MapGet("/", () => "API is running!");
 
 app.Run();
