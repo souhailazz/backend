@@ -7,6 +7,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Bind to PORT from environment variables (default to 5000)
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5000";
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(int.Parse(port));
+});
+
+// Configure CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
@@ -18,27 +27,32 @@ builder.Services.AddCors(options =>
                 .AllowAnyHeader();
         });
 });
+
 // Configure DbContext with SQL Server
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+                     ?? "workstation id=AppartementReservationDB.mssql.somee.com;packet size=4096;user id=souhailazzimani_SQLLogin_1;pwd=x7heeqrtjf;data source=AppartementReservationDB.mssql.somee.com;persist security info=False;initial catalog=AppartementReservationDB;TrustServerCertificate=True";
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString));
+
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
-    options.IdleTimeout = TimeSpan.FromMinutes(30); // Set session timeout
-    options.Cookie.HttpOnly = true; // Make the session cookie HTTP only
-    options.Cookie.IsEssential = true; // Make the session cookie essential
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Enable Swagger **only in development**
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseCors("AllowAll");
 
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.UseSession();
