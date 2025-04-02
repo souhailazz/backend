@@ -32,8 +32,13 @@ builder.Services.AddCors(options =>
 // Configure DbContext with SQL Server
 // Get connection string from environment variable or fall back to hardcoded one only for development
 string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
-    "workstation id=AppartementReservationDB.mssql.somee.com;packet size=4096;user id=souhailazzimani_SQLLogin_1;pwd=x7heeqrtjf;data source=AppartementReservationDB.mssql.somee.com;persist security info=False;initial catalog=AppartementReservationDB;TrustServerCertificate=True";
-
+    "Server=AppartementReservationDB.mssql.somee.com;" +
+    "Database=AppartementReservationDB;" +
+    "User Id=souhailazzimani_SQLLogin_1;" +
+    "Password=x7heeqrtjf;" +
+    "TrustServerCertificate=True;" +
+    "Encrypt=True;" +
+    "MultipleActiveResultSets=True";
 // Configure DbContext with SQL Server
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString, sqlOptions =>
