@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using AppartementReservationAPI.Data;
 using System.IO;
+using AppartementReservationAPI.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +31,8 @@ builder.Services.AddCors(options =>
         });
 });
 
-
+// In Program.cs
+builder.Services.AddScoped<IStripeService, StripeService>();
 string connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? 
     "Server=AppartementReservationDB.mssql.somee.com;" +
     "Database=AppartementReservationDB;" +
