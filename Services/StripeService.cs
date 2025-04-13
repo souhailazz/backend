@@ -3,6 +3,9 @@ using System.Threading.Tasks;
 using Stripe;
 using Stripe.Checkout;
 using Microsoft.Extensions.Configuration;
+using Stripe;
+using System.IO;
+
 
 namespace AppartementReservationAPI.Services
 {
@@ -11,6 +14,7 @@ namespace AppartementReservationAPI.Services
         private readonly string _apiKey;
         private readonly string _webhookSecret;
         private readonly string _frontendUrl;
+public string webhookSecret => _webhookSecret;
 
         public StripeService(IConfiguration configuration)
         {

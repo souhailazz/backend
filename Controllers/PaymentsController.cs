@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using AppartementReservationAPI.Models;
 using AppartementReservationAPI.Data;
 using AppartementReservationAPI.Services;
+using System.IO;
+using Stripe;
+using Stripe.Checkout;
 
 namespace AppartementReservationAPI.Controllers
 {
@@ -113,11 +113,55 @@ namespace AppartementReservationAPI.Controllers
                     CustomerEmail = session.CustomerEmail
                 });
             }
-            catch (Exception ex)  // Fixed the missing exception variable here
+            catch (Exception ex)
             {
                 return StatusCode(500, $"Error retrieving session: {ex.Message}");
             }
         }
+
+        // Handle Stripe webhook for payment confirmation
+[HttpPost("webhook")]
+public async Task<IActionResult> HandleStripeWebhook()
+{
+    var json = await new StreamReader(HttpContext.Request.Body).ReadToEndAsync();
+    try
+    {
+        var stripeEvent = EventUtility.ConstructEvent(
+            json, 
+            Request.Headers["Stripe-Signature"], 
+            _stripeService.webhookSecret);
+
+        // Handle the event
+if (stripeEvent.Type == "checkout.session.completed")
+        {
+            var session = stripeEvent.Data.Object as Session;
+            // Get the reservation ID from metadata
+            int reservationId = 0;
+
+            if (session.Metadata.TryGetValue("ReservationId", out string reservationIdStr) &&
+    int.TryParse(reservationIdStr, out reservationId))
+            {
+                // Update reservation status only
+                var reservation = await _context.Reservation
+                    .Include(r => r.Paiement)
+                    .FirstOrDefaultAsync(r => r.id_reservation == reservationId);
+
+                if (reservation != null && reservation.Paiement != null)
+                {
+                    reservation.etat = "Confirmed";
+                    // Update payment_code instead of status
+                    reservation.Paiement.payment_code = session.PaymentIntentId;
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+        return Ok();
+    }
+    catch (Exception ex)
+    {
+        return BadRequest($"Webhook error: {ex.Message}");
+    }
+}
     }
 
     public class StripeCheckoutRequest
