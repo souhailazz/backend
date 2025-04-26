@@ -68,45 +68,65 @@ namespace AppartementReservationAPI.Controllers
         }
 
         [HttpPost("create-checkout-session")]
-        public async Task<string> CreateCheckoutSession(
-    int reservationId,
-    string description,
-    decimal amount,
-    string customerEmail)
+public async Task<ActionResult> CreateCheckoutSession(StripeCheckoutRequest request)
 {
-    var options = new SessionCreateOptions
+    try
     {
-        PaymentMethodTypes = new List<string> { "card" },
-        LineItems = new List<SessionLineItemOptions>
-        {
-            new SessionLineItemOptions
-            {
-                PriceData = new SessionLineItemPriceDataOptions
-                {
-                    UnitAmount = (long)(amount * 100), // Convert to cents
-                    Currency = "eur", // Set your currency
-                    ProductData = new SessionLineItemPriceDataProductDataOptions
-                    {
-                        Name = "Apartment Reservation",
-                        Description = description
-                    }
-                },
-                Quantity = 1
-            }
-        },
-        Mode = "payment",
-        SuccessUrl = "https://clientfrance.netlify.app/payment/success?session_id={CHECKOUT_SESSION_ID}",
-        CancelUrl = "https://clientfrance.netlify.app/payment/cancel",
-        CustomerEmail = customerEmail,
-        Metadata = new Dictionary<string, string>
-        {
-            { "ReservationId", reservationId.ToString() }
-        }
-    };
+        var reservation = await _context.Reservation
+            .Include(r => r.Appartement)
+            .Include(r => r.Client)
+            .FirstOrDefaultAsync(r => r.id_reservation == request.ReservationId);
 
-    var service = new SessionService();
-    var session = await service.CreateAsync(options);
-    return session.Url;
+        if (reservation == null)
+        {
+            return NotFound("Reservation not found");
+        }
+
+        string description = $"Reservation for {reservation.Appartement.Titre ?? "Apartment"} " +
+                           $"from {reservation.date_depart:yyyy-MM-dd} to {reservation.date_sortie:yyyy-MM-dd}";
+
+        // Get customer email - first try from the reservation
+        string customerEmail = null;
+        
+        // Option 1: Get email from reservation.Client if available
+        if (reservation.Client != null && !string.IsNullOrEmpty(reservation.Client.Mail))
+        {
+            customerEmail = reservation.Client.Mail;
+        }
+        // Option 2: If no email in reservation, try to get from session
+        else
+        {
+            // Get client ID from session
+            int? clientId = HttpContext.Session.GetInt32("ClientId");
+            if (clientId.HasValue)
+            {
+                var client = await _context.Client.FindAsync(clientId.Value);
+                if (client != null && !string.IsNullOrEmpty(client.Mail))
+                {
+                    customerEmail = client.Mail;
+                }
+            }
+        }
+
+        // Check if we have an email now
+        if (string.IsNullOrEmpty(customerEmail))
+        {
+            return BadRequest("Customer email is required. Please ensure you are logged in.");
+        }
+
+        string checkoutUrl = await _stripeService.CreateCheckoutSession(
+            request.ReservationId,
+            description,
+            request.Amount,
+            customerEmail // Now we're passing a valid email address
+        );
+
+        return Ok(new { Url = checkoutUrl });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, $"Error creating checkout session: {ex.Message}");
+    }
 }
 
         [HttpGet("session-status")]
