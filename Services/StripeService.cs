@@ -18,9 +18,9 @@ public string webhookSecret => _webhookSecret;
 
         public StripeService(IConfiguration configuration)
         {
-            _apiKey = configuration["Stripe:SecretKey"];
-            _webhookSecret = configuration["Stripe:WebhookSecret"];
-            _frontendUrl = configuration["App:FrontendUrl"];
+             _apiKey = Environment.GetEnvironmentVariable("STRIPE_SECRET_KEY");
+        _webhookSecret = Environment.GetEnvironmentVariable("STRIPE_WEBHOOK_SECRET");
+        _frontendUrl = configuration["App:FrontendUrl"];
             
             StripeConfiguration.ApiKey = _apiKey;
         }
