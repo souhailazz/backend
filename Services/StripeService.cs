@@ -25,43 +25,57 @@ public string webhookSecret => _webhookSecret;
             StripeConfiguration.ApiKey = _apiKey;
         }
 
-        public async Task<string> CreateCheckoutSession(int reservationId, string description, decimal amount, string customerEmail)
+       public async Task<string> CreateCheckoutSession(
+    int reservationId,
+    string description,
+    decimal amount,
+    string customerEmail)
+{
+    // Validate the inputs
+    if (string.IsNullOrEmpty(description))
+    {
+        throw new ArgumentException("Description cannot be null or empty");
+    }
+
+    if (string.IsNullOrEmpty(customerEmail))
+    {
+        throw new ArgumentException("Customer email cannot be null or empty");
+    }
+
+    var options = new SessionCreateOptions
+    {
+        PaymentMethodTypes = new List<string> { "card" },
+        LineItems = new List<SessionLineItemOptions>
         {
-            var options = new SessionCreateOptions
+            new SessionLineItemOptions
             {
-                PaymentMethodTypes = new List<string> { "card" },
-                LineItems = new List<SessionLineItemOptions>
+                PriceData = new SessionLineItemPriceDataOptions
                 {
-                    new SessionLineItemOptions
+                    UnitAmount = (long)(amount * 100),
+                    Currency = "eur",
+                    ProductData = new SessionLineItemPriceDataProductDataOptions
                     {
-                        PriceData = new SessionLineItemPriceDataOptions
-                        {
-                            Currency = "eur",
-                            UnitAmount = (long)(amount * 100), // Stripe uses cents
-                            ProductData = new SessionLineItemPriceDataProductDataOptions
-                            {
-                                Name = "Apartment Reservation",
-                                Description = description
-                            }
-                        },
-                        Quantity = 1
+                        Name = "Apartment Reservation",
+                        Description = description
                     }
                 },
-                Mode = "payment",
-                SuccessUrl = $"{_frontendUrl}/payment-success?session_id={{CHECKOUT_SESSION_ID}}&reservation_id={reservationId}",
-                CancelUrl = $"{_frontendUrl}/payment-cancel?reservation_id={reservationId}",
-                CustomerEmail = customerEmail,
-                Metadata = new Dictionary<string, string>
-                {
-                    { "ReservationId", reservationId.ToString() }
-                }
-            };
-
-            var service = new SessionService();
-            var session = await service.CreateAsync(options);
-            
-            return session.Url;
+                Quantity = 1
+            }
+        },
+        Mode = "payment",
+        SuccessUrl = "https://clientfrance.netlify.app/payment/success?session_id={CHECKOUT_SESSION_ID}",
+        CancelUrl = "https://clientfrance.netlify.app/payment/cancel",
+        CustomerEmail = customerEmail, // This will use the email we retrieved
+        Metadata = new Dictionary<string, string>
+        {
+            { "ReservationId", reservationId.ToString() }
         }
+    };
+
+    var service = new SessionService();
+    var session = await service.CreateAsync(options);
+    return session.Url;
+}
 
         public async Task<Session> GetSession(string sessionId)
         {

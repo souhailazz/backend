@@ -67,7 +67,7 @@ namespace AppartementReservationAPI.Controllers
             }
         }
 
-        [HttpPost("create-checkout-session")]
+       [HttpPost("create-checkout-session")]
 public async Task<ActionResult> CreateCheckoutSession(StripeCheckoutRequest request)
 {
     try
