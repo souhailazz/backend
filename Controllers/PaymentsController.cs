@@ -68,37 +68,46 @@ namespace AppartementReservationAPI.Controllers
         }
 
         [HttpPost("create-checkout-session")]
-        public async Task<ActionResult> CreateCheckoutSession(StripeCheckoutRequest request)
+        public async Task<string> CreateCheckoutSession(
+    int reservationId,
+    string description,
+    decimal amount,
+    string customerEmail)
+{
+    var options = new SessionCreateOptions
+    {
+        PaymentMethodTypes = new List<string> { "card" },
+        LineItems = new List<SessionLineItemOptions>
         {
-            try
+            new SessionLineItemOptions
             {
-                var reservation = await _context.Reservation
-                    .Include(r => r.Appartement)
-                    .Include(r => r.Client)
-                    .FirstOrDefaultAsync(r => r.id_reservation == request.ReservationId);
-
-                if (reservation == null)
+                PriceData = new SessionLineItemPriceDataOptions
                 {
-                    return NotFound("Reservation not found");
-                }
-
-                string description = $"Reservation for {reservation.Appartement.Titre ?? "Apartment"} " +
-                                   $"from {reservation.date_depart:d} to {reservation.date_sortie:d}";
-
-                string checkoutUrl = await _stripeService.CreateCheckoutSession(
-                    request.ReservationId,
-                    description,
-                    request.Amount,
-                    reservation.Client.Mail
-                );
-
-                return Ok(new { Url = checkoutUrl });
+                    UnitAmount = (long)(amount * 100), // Convert to cents
+                    Currency = "eur", // Set your currency
+                    ProductData = new SessionLineItemPriceDataProductDataOptions
+                    {
+                        Name = "Apartment Reservation",
+                        Description = description
+                    }
+                },
+                Quantity = 1
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Error creating checkout session: {ex.Message}");
-            }
+        },
+        Mode = "payment",
+        SuccessUrl = "https://clientfrance.netlify.app/payment/success?session_id={CHECKOUT_SESSION_ID}",
+        CancelUrl = "https://clientfrance.netlify.app/payment/cancel",
+        CustomerEmail = customerEmail,
+        Metadata = new Dictionary<string, string>
+        {
+            { "ReservationId", reservationId.ToString() }
         }
+    };
+
+    var service = new SessionService();
+    var session = await service.CreateAsync(options);
+    return session.Url;
+}
 
         [HttpGet("session-status")]
         public async Task<ActionResult> GetSessionStatus(string sessionId)
