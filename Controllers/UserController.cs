@@ -46,7 +46,34 @@ public class UserController : ControllerBase
 
         return Ok("User registered successfully.");
     }
+[HttpGet("email")]
+public async Task<IActionResult> GetUserEmail()
+{
+    // Try to get the client ID from the session
+    int? clientId = HttpContext.Session.GetInt32("ClientId");
+    
+    if (!clientId.HasValue)
+    {
+        return Unauthorized("User not logged in.");
+    }
 
+    try
+    {
+        var client = await _context.Client.FindAsync(clientId.Value);
+        
+        if (client == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        return Ok(new { email = client.Mail });
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error retrieving user email: {ex.Message}");
+        return StatusCode(500, "Internal server error while retrieving user data.");
+    }
+}
     [HttpPost("login")]
 public async Task<IActionResult> Login([FromBody] Client client)
 {
@@ -64,7 +91,6 @@ public async Task<IActionResult> Login([FromBody] Client client)
     }
 
     HttpContext.Session.SetInt32("ClientId", existingClient.Id);
-    Console.WriteLine($"Client ID: {existingClient.Id}");
 
     return Ok(new { id = existingClient.Id, message = "Login successful." });
 }
